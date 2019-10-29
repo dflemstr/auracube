@@ -1,5 +1,6 @@
 use super::gamma;
 use super::matrix;
+use crate::config;
 
 #[derive(Debug)]
 pub struct LedDisplay<E, L, D>
@@ -58,16 +59,14 @@ where
     stk: STK,
     oe: OE,
 }
-
-// How many times per second should the cube refresh completely
-const UPDATE_RATE_HZ: f32 = 30.0;
-
 // in order to reach UPDATE_RATE_HZ complete updates per second, we need to run this
 // method CUBE_SIZE times per update (to go through all z layers) * the sum of the gamma values
 // (which accounts for the delay due to gamma strobing).
-const BIT_DEPTH: f32 = 8.0;
-const ADJUSTED_UPDATE_RATE_HZ: f32 =
-    gamma::GAMMA_SUM_WEIGHT * UPDATE_RATE_HZ * BIT_DEPTH * matrix::CUBE_SIZE as f32;
+const BIT_DEPTH: u8 = 8;
+const ADJUSTED_UPDATE_RATE_HZ: f32 = gamma::GAMMA_SUM_WEIGHT
+    * config::FRAME_RATE_HZ as f32
+    * BIT_DEPTH as f32
+    * matrix::CUBE_SIZE as f32;
 
 impl<E, L, D> LedDisplay<E, L, D>
 where
@@ -86,6 +85,14 @@ where
         }
     }
 
+    pub fn is_at_frame_beginning(&self) -> bool {
+        self.bit == 0 && self.z == 0
+    }
+
+    pub fn is_at_frame_end(&self) -> bool {
+        self.bit == BIT_DEPTH - 1 && self.z == matrix::CUBE_SIZE - 1
+    }
+
     #[inline]
     pub fn update(&mut self, matrix: &super::matrix::LedMatrix) -> Result<Option<u32>, E> {
         self.z += 1;
@@ -93,7 +100,7 @@ where
 
         let next_freq = if self.z == 0 {
             self.bit += 1;
-            self.bit %= 8;
+            self.bit %= BIT_DEPTH;
 
             // the frequency to set the clock to in order to wait for the next cycle
             let b = self.bit as usize;
