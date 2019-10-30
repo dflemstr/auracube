@@ -11,28 +11,30 @@ mod audio;
 mod config;
 mod led;
 
+use stm32f4xx_hal::gpio;
+
 #[global_allocator]
 static ALLOCATOR: alloc_cortex_m::CortexMHeap = alloc_cortex_m::CortexMHeap::empty();
 
-type LedOutputPinState = stm32f4xx_hal::gpio::Output<stm32f4xx_hal::gpio::PushPull>;
+type LedOutputPinState = gpio::Output<gpio::PushPull>;
 
 type LedDisplay = led::display::LedDisplay<
     core::convert::Infallible,
     led::display::GpioLayerSelector<
         core::convert::Infallible,
-        stm32f4xx_hal::gpio::gpioc::PC11<LedOutputPinState>,
-        stm32f4xx_hal::gpio::gpiod::PD0<LedOutputPinState>,
-        stm32f4xx_hal::gpio::gpioc::PC10<LedOutputPinState>,
-        stm32f4xx_hal::gpio::gpioc::PC12<LedOutputPinState>,
+        gpio::gpioc::PC11<LedOutputPinState>,
+        gpio::gpiod::PD0<LedOutputPinState>,
+        gpio::gpioc::PC10<LedOutputPinState>,
+        gpio::gpioc::PC12<LedOutputPinState>,
     >,
     led::display::GpioDataBus<
         core::convert::Infallible,
-        stm32f4xx_hal::gpio::gpioc::PC8<LedOutputPinState>,
-        stm32f4xx_hal::gpio::gpioe::PE2<LedOutputPinState>,
-        stm32f4xx_hal::gpio::gpioe::PE3<LedOutputPinState>,
-        stm32f4xx_hal::gpio::gpioc::PC7<LedOutputPinState>,
-        stm32f4xx_hal::gpio::gpioc::PC6<LedOutputPinState>,
-        stm32f4xx_hal::gpio::gpiod::PD15<LedOutputPinState>,
+        gpio::gpioc::PC8<LedOutputPinState>,
+        gpio::gpioe::PE2<LedOutputPinState>,
+        gpio::gpioe::PE3<LedOutputPinState>,
+        gpio::gpioc::PC7<LedOutputPinState>,
+        gpio::gpioc::PC6<LedOutputPinState>,
+        gpio::gpiod::PD15<LedOutputPinState>,
     >,
 >;
 
@@ -42,8 +44,8 @@ type LedTimer = stm32f4xx_hal::timer::Timer<stm32f4xx_hal::stm32::TIM4>;
 
 type AudioTimer = stm32f4xx_hal::timer::Timer<stm32f4xx_hal::stm32::TIM2>;
 type AudioAdc = stm32f4xx_hal::adc::Adc<stm32f4xx_hal::stm32::ADC1>;
-type AudioLineInPin = stm32f4xx_hal::gpio::gpioa::PA1<stm32f4xx_hal::gpio::Analog>;
-type AudioMicPin = stm32f4xx_hal::gpio::gpioa::PA2<stm32f4xx_hal::gpio::Analog>;
+type AudioLineInPin = gpio::gpioa::PA1<gpio::Analog>;
+type AudioMicPin = gpio::gpioa::PA2<gpio::Analog>;
 type AudioSampler = audio::sampler::Sampler;
 type AudioFft = audio::spectrum::Fft;
 type AudioSpectrum = audio::spectrum::Spectrum;
@@ -147,16 +149,16 @@ fn init_impl() -> init::LateResources {
         .use_hse(25.mhz())
         .freeze();
 
-    let gpioa = stm32f4xx_hal::gpio::GpioExt::split(device.GPIOA);
-    let gpioc = stm32f4xx_hal::gpio::GpioExt::split(device.GPIOC);
-    let gpiod = stm32f4xx_hal::gpio::GpioExt::split(device.GPIOD);
-    let gpioe = stm32f4xx_hal::gpio::GpioExt::split(device.GPIOE);
+    let gpioa = gpio::GpioExt::split(device.GPIOA);
+    let gpioc = gpio::GpioExt::split(device.GPIOC);
+    let gpiod = gpio::GpioExt::split(device.GPIOD);
+    let gpioe = gpio::GpioExt::split(device.GPIOE);
 
     // we need to use a macro because the pins don't implement a common trait
     macro_rules! output_pin {
         ($pin:expr) => {
             $pin.into_push_pull_output()
-                .set_speed(stm32f4xx_hal::gpio::Speed::VeryHigh)
+                .set_speed(gpio::Speed::VeryHigh)
         };
     };
 
@@ -255,7 +257,7 @@ fn sample_audio_start_impl(
 
     audio_adc.enable();
     audio_adc.configure_channel(
-        audio_line_in_pin,
+        audio_mic_pin,
         stm32f4xx_hal::adc::config::Sequence::One,
         stm32f4xx_hal::adc::config::SampleTime::Cycles_28,
     );
